@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:filepolicy;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false
+    username: sa
+    password:
+  jpa:
+    show-sql: true
+  h2:
+    console:
+      enabled: true
+      path: /h2-console

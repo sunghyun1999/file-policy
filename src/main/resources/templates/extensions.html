@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <title>파일 확장자 차단 관리</title>
+  <style>
+    :root { --bd:#e5e7eb; --muted:#6b7280; --fg:#111827; }
+    body { font-family:-apple-system, Segoe UI, Roboto, sans-serif; margin:24px; color:var(--fg); }
+    .wrap { max-width:860px; margin:0 auto; display:grid; gap:16px; }
+    .section { border:1px solid var(--bd); border-radius:12px; padding:16px; }
+    .heading { margin:0 0 12px 0; font-size:18px; font-weight:700; }
+    .muted { color:var(--muted); font-size:13px; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap:10px; }
+    .row { display:flex; align-items:center; gap:8px; }
+    .line { display:flex; align-items:center; justify-content:space-between; border:1px dashed var(--bd); border-radius:10px; padding:8px 10px; }
+    .btn { background:#111827; color:#fff; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; white-space:nowrap; min-width:64px; text-align:center; }
+    .btn-outline { background:#fff; color:#111827; border:1px solid var(--bd); padding:6px 12px; border-radius:8px; cursor:pointer; white-space:nowrap; min-width:64px; text-align:center; }
+    input[type=text]{ padding:8px 10px; border:1px solid var(--bd); border-radius:8px; width:220px; }
+    .tags { display:flex; flex-wrap:wrap; gap:8px; }
+    .tag { display:inline-flex; align-items:center; gap:8px; border:1px solid var(--bd); border-radius:999px; padding:6px 10px; }
+    @media (max-width:520px){ .grid{ grid-template-columns: repeat(2, 1fr); } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <h2 style="margin:0;">파일 확장자 차단 관리</h2>
+
+  <!-- 고정 확장자: 체크박스 토글 = 즉시 저장 -->
+  <div class="section">
+    <div class="heading">고정 확장자</div>
+    <div class="grid" th:if="${fixed}">
+      <div th:each="item : ${fixed}" class="line">
+        <form th:action="@{/extensions/fixed/toggle}" method="post" class="row" style="gap:10px;">
+          <input type="hidden" name="value" th:value="${item.value}"/>
+          <input type="hidden" name="enabled" value="false"/>
+          <input type="checkbox"
+                 th:checked="${item.enabled}"
+                 onchange="this.form.querySelector('input[name=enabled]').value = this.checked; saveTestInput(); this.form.submit();"/>
+          <b th:text="${item.value}">exe</b>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 커스텀 확장자: 추가=차단, X=삭제 -->
+  <div class="section">
+    <div class="heading">커스텀 확장자</div>
+    <div class="row" style="justify-content:space-between; margin-bottom:8px;">
+      <span class="muted"><span th:text="${customCount}">0</span> / <span th:text="${customLimit}">200</span></span>
+    </div>
+
+    <form th:action="@{/extensions/custom/add}" method="post" class="row" style="gap:8px; margin-bottom:12px;" onsubmit="saveTestInput()">
+      <label for="customInput" style="font-weight:600;">확장자</label>
+      <input id="customInput" type="text" name="value" maxlength="20" oninput="this.value=this.value.toLowerCase()"/>
+      <button type="submit" class="btn">추가</button>
+    </form>
+
+    <div th:if="${#lists.isEmpty(custom)}" class="muted">커스텀 확장자가 없습니다.</div>
+    <div th:if="${!#lists.isEmpty(custom)}" class="tags">
+      <div class="tag" th:each="item : ${custom}">
+        <b th:text="${item.value}">jar</b>
+        <form th:action="@{/extensions/custom/delete}" method="post" onsubmit="saveTestInput()">
+          <input type="hidden" name="value" th:value="${item.value}"/>
+          <button type="submit" class="btn-outline">X</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 파일명 차단 테스트 (정책: 기본 허용 / 고정 체크·커스텀은 차단) -->
+  <div class="section">
+    <div class="heading">파일명 차단 테스트</div>
+    <div class="row" style="gap:8px;">
+      <label for="fname" style="font-weight:600;">파일명</label>
+      <input type="text" id="fname"/>
+      <button class="btn" onclick="testValidate()">확인</button>
+      <span id="res" class="muted"></span>
+    </div>
+    <div class="muted" style="margin-top:6px;">
+      규칙: 기본은 허용, 단 <u>고정(체크된 항목)</u>과 <u>커스텀에 등록된 확장자</u>는 차단.
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function saveTestInput(){
+    const el = document.getElementById('fname');
+    if (el) localStorage.setItem('filepolicy:testInput', el.value || '');
+  }
+  function restoreTestInput(){
+    const el = document.getElementById('fname');
+    if (!el) return;
+    const v = localStorage.getItem('filepolicy:testInput');
+    if (v !== null) el.value = v;
+  }
+  document.addEventListener('DOMContentLoaded', restoreTestInput);
+
+  async function testValidate(){
+    saveTestInput();
+    const fd = new FormData();
+    fd.append('filename', document.getElementById('fname').value);
+    const resp = await fetch('/extensions/validate-filename', {method:'POST', body: fd});
+    const data = await resp.json();
+    const el = document.getElementById('res');
+    el.innerText = data.blocked ? '차단됨' : '허용';
+    el.style.color = data.blocked ? '#b91c1c' : '#065f46';
+  }
+</script>
+</body>
+</html>
