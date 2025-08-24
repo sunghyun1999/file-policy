@@ -1,6 +1,7 @@
 package com.flow.filepolicy.web;
 
 import com.flow.filepolicy.service.ExtensionService;
+import com.flow.filepolicy.service.ExtensionView;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
@@ -22,10 +23,9 @@ public class ExtensionController {
 
   private final ExtensionService service;
 
-  @GetMapping
+  @GetMapping({"", "/"})
   public String page(Model model, @RequestParam(required = false) String message) {
-    model.addAllAttributes(service.getAllForView());
-    model.addAttribute("message", message);
+    bindView(model, service.getAllForView());
     return "extensions";
   }
 
@@ -37,9 +37,8 @@ public class ExtensionController {
   }
 
   @PostMapping("/custom/add")
-  public String addCustom(ExtensionForm  form, RedirectAttributes ra) {
+  public String addCustom(ExtensionForm  form) {
     service.addCustom(form.value());
-    ra.addAttribute("message", "커스텀 확장자 추가 완료");
     return "redirect:/extensions";
   }
 
@@ -53,6 +52,13 @@ public class ExtensionController {
   @ResponseBody
   public Object validateFilename(@RequestParam String filename) {
     return java.util.Map.of("filename", filename, "blocked", service.shouldBlockFilename(filename));
+  }
+
+  private void bindView(Model model, ExtensionView view) {
+    model.addAttribute("fixed", view.fixed());
+    model.addAttribute("custom", view.custom());
+    model.addAttribute("customCount", view.customCount());
+    model.addAttribute("customLimit", view.customLimit());
   }
 
 }

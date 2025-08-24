@@ -38,15 +38,14 @@ public class ExtensionService {
 
   @Transactional(readOnly = true)
   @Cacheable(cacheNames = "extList")
-  public Map<String, Object> getAllForView() {
-    var fixed  = blockedExtensionRepository.findAllByTypeOrderByValueAsc(ExtensionType.FIXED);
-    var custom = blockedExtensionRepository.findAllByTypeOrderByValueAsc(ExtensionType.CUSTOM);
-    return Map.of(
-        "fixed", fixed,
-        "custom", custom,
-        "customCount", custom.size(),
-        "customLimit", CUSTOM_LIMIT
-    );
+  public ExtensionView getAllForView() {
+    var fixedEntities  = blockedExtensionRepository.findAllByTypeOrderByValueAsc(ExtensionType.FIXED);
+    var customEntities = blockedExtensionRepository.findAllByTypeOrderByValueAsc(ExtensionType.CUSTOM);
+
+    var fixed  = fixedEntities.stream().map(BlockedExtensionView::from).toList();
+    var custom = customEntities.stream().map(BlockedExtensionView::from).toList();
+
+    return new ExtensionView(fixed, custom, custom.size(), CUSTOM_LIMIT);
   }
 
   /** 고정 확장자 ON/OFF */
@@ -94,14 +93,13 @@ public class ExtensionService {
 
     var ext = name.substring(idx + 1).toLowerCase(Locale.ROOT);
 
-    var fixed  = (List<BlockedExtension>) getAllForView().get("fixed");
-    var custom = (List<BlockedExtension>) getAllForView().get("custom");
+    var view = getAllForView();
 
-    boolean blockedByFixed = fixed.stream().anyMatch(f -> f.isEnabled() && f.getValue().equals(ext));
+    boolean blockedByFixed = view.fixed().stream()
+        .anyMatch(f -> f.enabled() && f.value().equals(ext));
     if (blockedByFixed) return true;
 
-    boolean blockedByCustom = custom.stream().anyMatch(c -> c.getValue().equals(ext));
-    return blockedByCustom;
+    return view.custom().stream().anyMatch(c -> c.value().equals(ext));
   }
 
 }

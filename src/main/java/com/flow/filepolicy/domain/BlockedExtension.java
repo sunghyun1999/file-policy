@@ -28,7 +28,7 @@ public class BlockedExtension {
   private String value;
 
   @Enumerated(EnumType.STRING)
-  @Column(length = 10, nullable = false)
+  @Column(name = "ext_type", length = 10, nullable = false)
   private ExtensionType type;
 
   @Column(nullable = false)
